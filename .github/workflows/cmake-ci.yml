@@ -18,6 +18,11 @@ on:
         required: false
         type: string
         default: ''
+      cxx_standard:
+        description: 'C++ language standard to use (e.g. 17, 20, 23)'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   generate-matrix:
@@ -48,7 +53,7 @@ jobs:
               {"os": "ubuntu-22.04", "compiler": "g++-12", "packages": "g++-12", "build_type": "Debug"},
               {"os": "ubuntu-24.04-arm", "compiler": "g++-14", "packages": "g++-14", "build_type": "Debug"}
           ]
-          
+
           windows_base = [
               {"os": "windows-2025", "arch": "x64", "build_type": "Release"},
               {"os": "windows-2025", "arch": "x86", "build_type": "Release"},
@@ -100,10 +105,15 @@ jobs:
         env:
           CPM_SOURCE_CACHE: ${{ runner.temp }}/cpm-cache
         run: |
+          EXTRA_ARGS=()
+          if [ -n "${{ inputs.cxx_standard }}" ]; then
+            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
+          fi
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            "${EXTRA_ARGS[@]}"
           cmake --build build --parallel
           ctest --test-dir build --output-on-failure
 
@@ -135,12 +145,18 @@ jobs:
           arch: ${{ matrix.arch }}
 
       - name: Configure, build, and test
+        shell: bash
         env:
           CPM_SOURCE_CACHE: ${{ runner.temp }}/cpm-cache
         run: |
-          cmake -B build -G Ninja `
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
-            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          EXTRA_ARGS=()
+          if [ -n "${{ inputs.cxx_standard }}" ]; then
+            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
+          fi
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            "${EXTRA_ARGS[@]}"
           cmake --build build --parallel
           ctest --test-dir build --output-on-failure
 
@@ -170,8 +186,13 @@ jobs:
         env:
           CPM_SOURCE_CACHE: ${{ runner.temp }}/cpm-cache
         run: |
+          EXTRA_ARGS=()
+          if [ -n "${{ inputs.cxx_standard }}" ]; then
+            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
+          fi
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            "${EXTRA_ARGS[@]}"
           cmake --build build --parallel 1
           ctest --test-dir build --output-on-failure
