@@ -28,16 +28,20 @@ on:
         required: false
         type: string
         default: ''
-      cmake_args_debug:
-        description: 'Extra arguments to pass to cmake for Debug configuration'
+
+      # example usage:
+      # with:
+      #   cmake_args_map: |
+      #     {
+      #       "ubuntu-24.04:clang++-20": "-DNOVA_NONNULL_ENABLE_CHECKS=ON",
+      #       "windows-2025:x64": "-DSOME_OTHER_FLAG=1",
+      #       "macos-14": "-DMAC_SPECIFIC_FLAG=ON"
+      #     }
+      cmake_args_map:
+        description: 'JSON map of OS/compiler (or OS/arch) to extra cmake arguments. Keys like "ubuntu-24.04:clang++-20" or "windows-2025:x64"'
         required: false
         type: string
-        default: ''
-      cmake_args_release:
-        description: 'Extra arguments to pass to cmake for Release configuration'
-        required: false
-        type: string
-        default: ''
+        default: '{}'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -91,9 +95,22 @@ jobs:
               {"os": "macos-15-intel", "build_type": "Release"}
           ]
 
+          try:
+              args_map = json.loads('''${{ inputs.cmake_args_map }}''')
+          except Exception:
+              args_map = {}
+
           linux_matrix = [x for x in linux_base if x['compiler'] not in exclude_linux]
+          for x in linux_matrix:
+              x['extra_args'] = args_map.get(f"{x['os']}:{x['compiler']}", "")
+
           windows_matrix = [x for x in windows_base if f"{x['os']}_{x['arch']}" not in exclude_windows]
+          for x in windows_matrix:
+              x['extra_args'] = args_map.get(f"{x['os']}:{x['arch']}", "")
+
           macos_matrix = [x for x in macos_base if x['os'] not in exclude_macos]
+          for x in macos_matrix:
+              x['extra_args'] = args_map.get(x['os'], "")
 
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"linux_matrix={json.dumps({'include': linux_matrix})}\n")
@@ -175,11 +192,8 @@ jobs:
           if [ -n "${{ inputs.cmake_args }}" ]; then
             EXTRA_ARGS+=(${{ inputs.cmake_args }})
           fi
-          if [ "${{ matrix.build_type }}" = "Debug" ] && [ -n "${{ inputs.cmake_args_debug }}" ]; then
-            EXTRA_ARGS+=(${{ inputs.cmake_args_debug }})
-          fi
-          if [ "${{ matrix.build_type }}" = "Release" ] && [ -n "${{ inputs.cmake_args_release }}" ]; then
-            EXTRA_ARGS+=(${{ inputs.cmake_args_release }})
+          if [ -n "${{ matrix.extra_args }}" ]; then
+            EXTRA_ARGS+=(${{ matrix.extra_args }})
           fi
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
@@ -229,11 +243,8 @@ jobs:
           if [ -n "${{ inputs.cmake_args }}" ]; then
             EXTRA_ARGS+=(${{ inputs.cmake_args }})
           fi
-          if [ "${{ matrix.build_type }}" = "Debug" ] && [ -n "${{ inputs.cmake_args_debug }}" ]; then
-            EXTRA_ARGS+=(${{ inputs.cmake_args_debug }})
-          fi
-          if [ "${{ matrix.build_type }}" = "Release" ] && [ -n "${{ inputs.cmake_args_release }}" ]; then
-            EXTRA_ARGS+=(${{ inputs.cmake_args_release }})
+          if [ -n "${{ matrix.extra_args }}" ]; then
+            EXTRA_ARGS+=(${{ matrix.extra_args }})
           fi
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
@@ -275,11 +286,8 @@ jobs:
           if [ -n "${{ inputs.cmake_args }}" ]; then
             EXTRA_ARGS+=(${{ inputs.cmake_args }})
           fi
-          if [ "${{ matrix.build_type }}" = "Debug" ] && [ -n "${{ inputs.cmake_args_debug }}" ]; then
-            EXTRA_ARGS+=(${{ inputs.cmake_args_debug }})
-          fi
-          if [ "${{ matrix.build_type }}" = "Release" ] && [ -n "${{ inputs.cmake_args_release }}" ]; then
-            EXTRA_ARGS+=(${{ inputs.cmake_args_release }})
+          if [ -n "${{ matrix.extra_args }}" ]; then
+            EXTRA_ARGS+=(${{ matrix.extra_args }})
           fi
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
