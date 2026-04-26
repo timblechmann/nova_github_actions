@@ -50,6 +50,8 @@ jobs:
               {"os": "ubuntu-24.04", "compiler": "clang++-18", "packages": "clang-18", "build_type": "Release"},
               {"os": "ubuntu-24.04", "compiler": "clang++-19", "packages": "clang-19", "build_type": "Debug"},
               {"os": "ubuntu-24.04", "compiler": "clang++-20", "packages": "clang-20", "build_type": "Release"},
+              {"os": "ubuntu-24.04", "compiler": "clang++-21", "packages": "clang-21", "build_type": "Debug"},
+              {"os": "ubuntu-24.04", "compiler": "clang++-22", "packages": "clang-22", "build_type": "Release"},
               {"os": "ubuntu-22.04", "compiler": "g++-12", "packages": "g++-12", "build_type": "Debug"},
               {"os": "ubuntu-24.04-arm", "compiler": "g++-14", "packages": "g++-14", "build_type": "Debug"}
           ]
@@ -57,12 +59,15 @@ jobs:
           windows_base = [
               {"os": "windows-2025", "arch": "x64", "build_type": "Release"},
               {"os": "windows-2025", "arch": "x86", "build_type": "Release"},
-              {"os": "windows-2022", "arch": "x64", "build_type": "Release"}
+              {"os": "windows-2022", "arch": "x64", "build_type": "Release"},
+              {"os": "windows-11-arm", "arch": "arm64", "build_type": "Release"},
+              {"os": "windows-11-arm", "arch": "arm64", "build_type": "Debug"}
           ]
 
           macos_base = [
               {"os": "macos-14", "build_type": "Release"},
               {"os": "macos-15", "build_type": "Release"},
+              {"os": "macos-26", "build_type": "Release"},
               {"os": "macos-15-intel", "build_type": "Release"}
           ]
 
