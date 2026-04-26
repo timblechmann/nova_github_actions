@@ -121,6 +121,12 @@ jobs:
         with:
           version: ${{ steps.check_compiler.outputs.version }}
 
+      - name: Install libclang-rt
+        if: steps.check_compiler.outputs.installed == 'false' && steps.check_compiler.outputs.is_clang == 'true'
+        shell: bash
+        run: |
+          sudo apt-get install -yq --no-install-recommends libclang-rt-${{ steps.check_compiler.outputs.version }}-dev llvm-${{ steps.check_compiler.outputs.version }}-dev
+
       - name: Install GCC
         if: steps.check_compiler.outputs.installed == 'false' && steps.check_compiler.outputs.is_clang == 'false'
         shell: bash
