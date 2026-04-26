@@ -89,14 +89,24 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install compiler
+      - name: Check if compiler is installed
+        id: check_compiler
+        shell: bash
         run: |
-          if ! command -v ${{ matrix.compiler }} &> /dev/null; then
-            sudo apt-get update -q
-            sudo apt-get install -y ${{ matrix.packages }}
-          else
+          if command -v ${{ matrix.compiler }} &> /dev/null; then
             echo "${{ matrix.compiler }} is already installed."
+            echo "installed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "${{ matrix.compiler }} is missing."
+            echo "installed=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Install compiler
+        if: steps.check_compiler.outputs.installed == 'false'
+        shell: bash
+        run: |
+          sudo apt-get update -yq
+          sudo apt-get install -yq --no-install-recommends ${{ matrix.packages }}
 
       - name: Cache CPM sources
         uses: actions/cache@v4
