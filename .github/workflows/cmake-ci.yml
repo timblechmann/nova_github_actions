@@ -23,6 +23,21 @@ on:
         required: false
         type: string
         default: ''
+      cmake_args:
+        description: 'Extra arguments to pass to cmake globally'
+        required: false
+        type: string
+        default: ''
+      cmake_args_debug:
+        description: 'Extra arguments to pass to cmake for Debug configuration'
+        required: false
+        type: string
+        default: ''
+      cmake_args_release:
+        description: 'Extra arguments to pass to cmake for Release configuration'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -157,6 +172,15 @@ jobs:
           if [ -n "${{ inputs.cxx_standard }}" ]; then
             EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
           fi
+          if [ -n "${{ inputs.cmake_args }}" ]; then
+            EXTRA_ARGS+=(${{ inputs.cmake_args }})
+          fi
+          if [ "${{ matrix.build_type }}" = "Debug" ] && [ -n "${{ inputs.cmake_args_debug }}" ]; then
+            EXTRA_ARGS+=(${{ inputs.cmake_args_debug }})
+          fi
+          if [ "${{ matrix.build_type }}" = "Release" ] && [ -n "${{ inputs.cmake_args_release }}" ]; then
+            EXTRA_ARGS+=(${{ inputs.cmake_args_release }})
+          fi
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
@@ -202,6 +226,15 @@ jobs:
           if [ -n "${{ inputs.cxx_standard }}" ]; then
             EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
           fi
+          if [ -n "${{ inputs.cmake_args }}" ]; then
+            EXTRA_ARGS+=(${{ inputs.cmake_args }})
+          fi
+          if [ "${{ matrix.build_type }}" = "Debug" ] && [ -n "${{ inputs.cmake_args_debug }}" ]; then
+            EXTRA_ARGS+=(${{ inputs.cmake_args_debug }})
+          fi
+          if [ "${{ matrix.build_type }}" = "Release" ] && [ -n "${{ inputs.cmake_args_release }}" ]; then
+            EXTRA_ARGS+=(${{ inputs.cmake_args_release }})
+          fi
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
@@ -238,6 +271,15 @@ jobs:
           EXTRA_ARGS=()
           if [ -n "${{ inputs.cxx_standard }}" ]; then
             EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
+          fi
+          if [ -n "${{ inputs.cmake_args }}" ]; then
+            EXTRA_ARGS+=(${{ inputs.cmake_args }})
+          fi
+          if [ "${{ matrix.build_type }}" = "Debug" ] && [ -n "${{ inputs.cmake_args_debug }}" ]; then
+            EXTRA_ARGS+=(${{ inputs.cmake_args_debug }})
+          fi
+          if [ "${{ matrix.build_type }}" = "Release" ] && [ -n "${{ inputs.cmake_args_release }}" ]; then
+            EXTRA_ARGS+=(${{ inputs.cmake_args_release }})
           fi
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
