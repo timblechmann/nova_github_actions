@@ -190,10 +190,14 @@ jobs:
             EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
           fi
           if [ -n "${{ inputs.cmake_args }}" ]; then
-            EXTRA_ARGS+=(${{ inputs.cmake_args }})
+            # split inputs.cmake_args on IFS into array to preserve multiple flags
+            read -r -a _cmake_args <<< "${{ inputs.cmake_args }}"
+            EXTRA_ARGS+=("${_cmake_args[@]}")
           fi
           if [ -n "${{ matrix.extra_args }}" ]; then
-            EXTRA_ARGS+=(${{ matrix.extra_args }})
+            # split matrix.extra_args on IFS into array (handles multiple flags)
+            read -r -a _matrix_args <<< "${{ matrix.extra_args }}"
+            EXTRA_ARGS+=("${_matrix_args[@]}")
           fi
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
@@ -241,10 +245,12 @@ jobs:
             EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
           fi
           if [ -n "${{ inputs.cmake_args }}" ]; then
-            EXTRA_ARGS+=(${{ inputs.cmake_args }})
+            read -r -a _cmake_args <<< "${{ inputs.cmake_args }}"
+            EXTRA_ARGS+=("${_cmake_args[@]}")
           fi
           if [ -n "${{ matrix.extra_args }}" ]; then
-            EXTRA_ARGS+=(${{ matrix.extra_args }})
+            read -r -a _matrix_args <<< "${{ matrix.extra_args }}"
+            EXTRA_ARGS+=("${_matrix_args[@]}")
           fi
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
@@ -284,10 +290,12 @@ jobs:
             EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
           fi
           if [ -n "${{ inputs.cmake_args }}" ]; then
-            EXTRA_ARGS+=(${{ inputs.cmake_args }})
+            read -r -a _cmake_args <<< "${{ inputs.cmake_args }}"
+            EXTRA_ARGS+=("${_cmake_args[@]}")
           fi
           if [ -n "${{ matrix.extra_args }}" ]; then
-            EXTRA_ARGS+=(${{ matrix.extra_args }})
+            read -r -a _matrix_args <<< "${{ matrix.extra_args }}"
+            EXTRA_ARGS+=("${_matrix_args[@]}")
           fi
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
