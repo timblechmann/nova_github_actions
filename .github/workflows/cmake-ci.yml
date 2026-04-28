@@ -205,7 +205,8 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             "${EXTRA_ARGS[@]}"
           cmake --build build --parallel
-          ctest --test-dir build --output-on-failure
+          # show which tests run and their output
+          ctest --test-dir build --output-on-failure -V
 
   build-windows:
     needs: [generate-matrix, build-linux]
@@ -257,7 +258,8 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             "${EXTRA_ARGS[@]}"
           cmake --build build --parallel
-          ctest --test-dir build --output-on-failure
+          # show which tests run and their output
+          ctest --test-dir build --output-on-failure -V
 
   build-macos:
     needs: [generate-matrix, build-windows]
@@ -302,4 +304,5 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             "${EXTRA_ARGS[@]}"
           cmake --build build --parallel 1
-          ctest --test-dir build --output-on-failure
+          # show which tests run and their output
+          ctest --test-dir build --output-on-failure -V
