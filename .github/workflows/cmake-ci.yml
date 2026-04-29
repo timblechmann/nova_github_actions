@@ -170,6 +170,12 @@ jobs:
           sudo apt-get update -yq
           sudo apt-get install -yq --no-install-recommends ${{ matrix.packages }}
 
+      - name: Ensure cache directories exist
+        run: |
+          mkdir -p "${{ runner.temp }}/cpm-cache"
+          mkdir -p "${{ runner.temp }}/sccache-cache"
+          echo "SCCACHE_DIR=${{ runner.temp }}/sccache-cache" >> $GITHUB_ENV
+
       - name: Cache CPM sources
         uses: actions/cache@v5
         with:
@@ -218,6 +224,13 @@ jobs:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.windows_matrix) }}
     steps:
       - uses: actions/checkout@v6
+
+      - name: Ensure cache directories exist (Windows)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "${{ runner.temp }}\cpm-cache" | Out-Null
+          New-Item -ItemType Directory -Force -Path "${{ runner.temp }}\sccache-cache" | Out-Null
+          Add-Content -Path $env:GITHUB_ENV -Value "SCCACHE_DIR=${{ runner.temp }}\sccache-cache"
 
       - name: Cache CPM sources
         uses: actions/cache@v5
@@ -271,6 +284,12 @@ jobs:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.macos_matrix) }}
     steps:
       - uses: actions/checkout@v6
+
+      - name: Ensure cache directories exist
+        run: |
+          mkdir -p "${{ runner.temp }}/cpm-cache"
+          mkdir -p "${{ runner.temp }}/sccache-cache"
+          echo "SCCACHE_DIR=${{ runner.temp }}/sccache-cache" >> $GITHUB_ENV
 
       - name: Cache CPM sources
         uses: actions/cache@v5
