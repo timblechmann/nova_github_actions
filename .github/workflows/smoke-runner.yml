@@ -1,0 +1,11 @@
+name: Smoke Runner (tests reusable cmake-ci)
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  call-reusable:
+    uses: ./.github/workflows/cmake-ci.yml
+    with:
+      cxx_standard: '20'
