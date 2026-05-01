@@ -66,10 +66,11 @@ jobs:
           exclude_windows = "${{ inputs.exclude_windows }}".split(',')
           exclude_macos = "${{ inputs.exclude_macos }}".split(',')
 
+          # g++15 times out
           linux_base = [
               {"os": "ubuntu-24.04", "compiler": "g++-13", "packages": "g++-13", "build_type": "Debug"},
               {"os": "ubuntu-24.04", "compiler": "g++-14", "packages": "g++-14", "build_type": "Release"},
-              {"os": "ubuntu-24.04", "compiler": "g++-15", "packages": "g++-15", "build_type": "Debug"},
+              # {"os": "ubuntu-24.04", "compiler": "g++-15", "packages": "g++-15", "build_type": "Debug"},
               {"os": "ubuntu-24.04", "compiler": "clang++-17", "packages": "clang-17", "build_type": "Release"},
               {"os": "ubuntu-24.04", "compiler": "clang++-18", "packages": "clang-18", "build_type": "Release"},
               {"os": "ubuntu-24.04", "compiler": "clang++-19", "packages": "clang-19", "build_type": "Debug"},
