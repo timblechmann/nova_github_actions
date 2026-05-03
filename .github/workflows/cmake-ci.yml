@@ -74,7 +74,7 @@ jobs:
               {"os": "ubuntu-24.04", "compiler": "clang++-17", "packages": "clang-17", "build_type": "Release"},
               {"os": "ubuntu-24.04", "compiler": "clang++-18", "packages": "clang-18", "build_type": "Release"},
               {"os": "ubuntu-24.04", "compiler": "clang++-19", "packages": "clang-19", "build_type": "Debug"},
-              {"os": "ubuntu-24.04", "compiler": "clang++-20", "packages": "clang-20", "build_type": "Release"},
+              {"os": "ubuntu-24.04", "compiler": "clang++-20", "packages": "clang-20", "build_type": "Release", "mode": "libcxx"},
               {"os": "ubuntu-24.04", "compiler": "clang++-21", "packages": "clang-21", "build_type": "Release"},
               {"os": "ubuntu-24.04", "compiler": "clang++-22", "packages": "clang-22", "build_type": "Release"},
               {"os": "ubuntu-22.04", "compiler": "g++-12", "packages": "g++-12", "build_type": "Debug"},
@@ -160,6 +160,27 @@ jobs:
         shell: bash
         run: |
           sudo apt-get install -yq --no-install-recommends libclang-rt-${{ steps.check_compiler.outputs.version }}-dev llvm-${{ steps.check_compiler.outputs.version }}-dev
+
+      - name: Install libc++ (when using mode=libcxx)
+        if: matrix.mode == 'libcxx'
+        shell: bash
+        run: |
+          ver=${{ steps.check_compiler.outputs.version }}
+          echo "Installing libc++ packages for clang version: $ver"
+          sudo apt-get update -yq
+          # Try installing versioned packages first, fall back to generic names
+          if ! sudo apt-get install -yq --no-install-recommends libc++-${ver}-dev libc++abi-${ver}-dev libunwind-${ver}-dev; then
+            echo "Versioned libc++ packages not available in default repos, attempting to add apt.llvm.org and install"
+            # add llvm apt repo and try again
+            wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - || true
+            CODENAME=$(lsb_release -cs)
+            echo "deb http://apt.llvm.org/${CODENAME}/ llvm-toolchain-${ver} main" | sudo tee /etc/apt/sources.list.d/llvm-${ver}.list
+            sudo apt-get update -yq || true
+            if ! sudo apt-get install -yq --no-install-recommends libc++-${ver}-dev libc++abi-${ver}-dev libunwind-${ver}-dev; then
+              echo "Couldn't install versioned libc++ packages from llvm repo; falling back to generic packages"
+              sudo apt-get install -yq --no-install-recommends libc++-dev libc++abi-dev libunwind-dev || true
+            fi
+          fi
 
       - name: Install GCC
         if: steps.check_compiler.outputs.installed == 'false' && steps.check_compiler.outputs.is_clang == 'false'
