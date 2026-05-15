@@ -70,7 +70,8 @@ jobs:
           linux_base = [
               {"os": "ubuntu-24.04", "compiler": "g++-13", "packages": "g++-13", "build_type": "Debug"},
               {"os": "ubuntu-24.04", "compiler": "g++-14", "packages": "g++-14", "build_type": "Release"},
-              # {"os": "ubuntu-24.04", "compiler": "g++-15", "packages": "g++-15", "build_type": "Debug"},
+              {"os": "ubuntu-24.04", "compiler": "g++-15", "packages": "g++-15", "build_type": "Debug", "cxx_standard": "23"},
+              {"os": "ubuntu-24.04", "compiler": "g++-16", "packages": "g++-16", "build_type": "Release", "cxx_flags": "-std=c++26 -freflection"},
               {"os": "ubuntu-24.04", "compiler": "clang++-17", "packages": "clang-17", "build_type": "Release"},
               {"os": "ubuntu-24.04", "compiler": "clang++-18", "packages": "clang-18", "build_type": "Release"},
               {"os": "ubuntu-24.04", "compiler": "clang++-19", "packages": "clang-19", "build_type": "Debug"},
@@ -180,17 +181,17 @@ jobs:
               echo "Couldn't install versioned libc++ packages from llvm repo; falling back to generic packages"
               sudo apt-get install -yq --no-install-recommends libc++-dev libc++abi-dev libunwind-dev || true
             fi
-          fi
-
+           fi
       - name: Install GCC
         if: steps.check_compiler.outputs.installed == 'false' && steps.check_compiler.outputs.is_clang == 'false'
         shell: bash
         run: |
-          if [[ "${{ matrix.compiler }}" == "g++-15" ]]; then
-            sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-          fi
-          sudo apt-get update -yq
-          sudo apt-get install -yq --no-install-recommends ${{ matrix.packages }}
+            # For newer gcc versions we may need the toolchain ppa
+            if [[ "${{ matrix.compiler }}" == "g++-15" || "${{ matrix.compiler }}" == "g++-16" ]]; then
+              sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+            fi
+            sudo apt-get update -yq
+            sudo apt-get install -yq --no-install-recommends ${{ matrix.packages }}
 
       - name: Ensure cache directories exist
         run: |
@@ -215,8 +216,11 @@ jobs:
           CPM_SOURCE_CACHE: ${{ runner.temp }}/cpm-cache
         run: |
           EXTRA_ARGS=()
+          # cxx standard: input overrides matrix; matrix may provide per-compiler default
           if [ -n "${{ inputs.cxx_standard }}" ]; then
-            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
+            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}" "-DCMAKE_CXX_STANDARD_REQUIRED=ON")
+          elif [ -n "${{ matrix.cxx_standard }}" ]; then
+            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ matrix.cxx_standard }}" "-DCMAKE_CXX_STANDARD_REQUIRED=ON")
           fi
           if [ -n "${{ inputs.cmake_args }}" ]; then
             # split inputs.cmake_args on IFS into array to preserve multiple flags
@@ -228,11 +232,19 @@ jobs:
             read -r -a _matrix_args <<< "${{ matrix.extra_args }}"
             EXTRA_ARGS+=("${_matrix_args[@]}")
           fi
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            "${EXTRA_ARGS[@]}"
+           # support per-matrix C++ flags (e.g. reflection flag for g++-16)
+           if [ -n "${{ matrix.cxx_flags }}" ]; then
+             mkdir -p build
+             printf 'string(APPEND CMAKE_CXX_FLAGS " %s")\n' "${{ matrix.cxx_flags }}" > build/cxx_flags.cmake
+             EXTRA_ARGS+=("-C" "build/cxx_flags.cmake")
+           fi
+           # show the exact cmake command for debugging
+           echo "Running: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ${EXTRA_ARGS[*]}"
+           cmake -B build \
+             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+             -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+             "${EXTRA_ARGS[@]}"
           cmake --build build --parallel
           # show which tests run and their output
           ctest --test-dir build --output-on-failure -V
@@ -279,7 +291,9 @@ jobs:
         run: |
           EXTRA_ARGS=()
           if [ -n "${{ inputs.cxx_standard }}" ]; then
-            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
+            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}" "-DCMAKE_CXX_STANDARD_REQUIRED=ON")
+          elif [ -n "${{ matrix.cxx_standard }}" ]; then
+            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ matrix.cxx_standard }}" "-DCMAKE_CXX_STANDARD_REQUIRED=ON")
           fi
           if [ -n "${{ inputs.cmake_args }}" ]; then
             read -r -a _cmake_args <<< "${{ inputs.cmake_args }}"
@@ -289,6 +303,12 @@ jobs:
             read -r -a _matrix_args <<< "${{ matrix.extra_args }}"
             EXTRA_ARGS+=("${_matrix_args[@]}")
           fi
+          if [ -n "${{ matrix.cxx_flags }}" ]; then
+            mkdir -p build
+            printf 'string(APPEND CMAKE_CXX_FLAGS " %s")\n' "${{ matrix.cxx_flags }}" > build/cxx_flags.cmake
+            EXTRA_ARGS+=("-C" "build/cxx_flags.cmake")
+          fi
+          echo "Running: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${EXTRA_ARGS[*]}"
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
@@ -331,9 +351,16 @@ jobs:
         run: |
           EXTRA_ARGS=()
           if [ -n "${{ inputs.cxx_standard }}" ]; then
-            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}")
-          fi
-          if [ -n "${{ inputs.cmake_args }}" ]; then
+            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ inputs.cxx_standard }}" "-DCMAKE_CXX_STANDARD_REQUIRED=ON")
+          elif [ -n "${{ matrix.cxx_standard }}" ]; then
+            EXTRA_ARGS+=("-DCMAKE_CXX_STANDARD=${{ matrix.cxx_standard }}" "-DCMAKE_CXX_STANDARD_REQUIRED=ON")
+           fi
+           if [ -n "${{ matrix.cxx_flags }}" ]; then
+             mkdir -p build
+             printf 'string(APPEND CMAKE_CXX_FLAGS " %s")\n' "${{ matrix.cxx_flags }}" > build/cxx_flags.cmake
+             EXTRA_ARGS+=("-C" "build/cxx_flags.cmake")
+           fi
+           if [ -n "${{ inputs.cmake_args }}" ]; then
             read -r -a _cmake_args <<< "${{ inputs.cmake_args }}"
             EXTRA_ARGS+=("${_cmake_args[@]}")
           fi
@@ -341,6 +368,7 @@ jobs:
             read -r -a _matrix_args <<< "${{ matrix.extra_args }}"
             EXTRA_ARGS+=("${_matrix_args[@]}")
           fi
+          echo "Running: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ${EXTRA_ARGS[*]}"
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
