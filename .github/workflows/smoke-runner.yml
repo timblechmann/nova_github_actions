@@ -7,5 +7,3 @@ on:
 jobs:
   call-reusable:
     uses: ./.github/workflows/cmake-ci.yml
-    with:
-      cxx_standard: '20'
